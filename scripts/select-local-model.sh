@@ -13,12 +13,12 @@ mapfile -t MODELS < <("${NODE_BIN}" - "${OLLAMA_CHAT_URL}" <<'NODE'
 const chatUrl = process.argv[2];
 const tagsUrl = chatUrl.replace(/\/api\/chat\/?$/, "/api/tags");
 const preferred = [
+  "qwen3-next:80b",
+  "gemma4:26b",
+  "gemma4:31b",
   "qwen3-next:80b-cloud",
   "gemma4:31b-cloud",
   "cogito-2.1:671b-cloud",
-  "qwen3-next:80b",
-  "gemma4:31b",
-  "gemma4:26b",
 ];
 try {
   const response = await fetch(tagsUrl);
@@ -50,7 +50,7 @@ else
     local_index=$((local_index + 1))
   done
   echo "Or type any model name/tag manually." >&2
-  echo "Useful tags: qwen3-next:80b-cloud, gemma4:31b-cloud" >&2
+  echo "Useful tags: qwen3-next:80b, gemma4:26b, qwen3-next:80b-cloud, gemma4:31b-cloud" >&2
 fi
 
 choice=""

@@ -159,13 +159,15 @@ test("local model chooses an available Qwen model when preferred is missing", ()
   assert.equal(chosen, "qwen3.6-27b-local:latest");
 });
 
-test("local model prefers added cloud frontier tags when available", () => {
+test("local model prefers local frontier tags over cloud tags when available", () => {
   const chosen = LocalModelClient.chooseModel([
     { name: "gemma4:31b-cloud" },
     { name: "qwen3-next:80b-cloud" },
+    { name: "gemma4:26b" },
+    { name: "qwen3-next:80b" },
     { name: "qwen3.6-27b-local:latest" },
   ]);
-  assert.equal(chosen, "qwen3-next:80b-cloud");
+  assert.equal(chosen, "qwen3-next:80b");
 });
 
 test("orchestrator dry-runs local-only with mocked local client", async () => {

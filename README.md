@@ -53,9 +53,11 @@ Set the model for the desktop launcher with:
 WALKIE_COLLAB_LOCAL_MODEL="your-model:tag" scripts/launch-walkie-collab.sh
 ```
 
-Recommended cloud model tags that work through Ollama's model registry:
+Recommended local and cloud model tags that work through Ollama's model registry:
 
 ```bash
+ollama pull qwen3-next:80b
+ollama pull gemma4:26b
 ollama pull qwen3-next:80b-cloud
 ollama pull gemma4:31b-cloud
 ```

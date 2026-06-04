@@ -92,6 +92,11 @@ export class LocalModelClient {
     const names = models.map((model) => model.name || model.model).filter(Boolean);
     if (preferred && names.includes(preferred)) return preferred;
     const ranked = [
+      /qwen3-next:80b-cloud/i,
+      /gemma4:31b-cloud/i,
+      /cogito-.*cloud/i,
+      /qwen3-next:80b/i,
+      /gemma4:(31b|26b)/i,
       /qwen3\.6.*local/i,
       /qwen3\.6/i,
       /qwen3\.5.*35/i,

@@ -4,6 +4,29 @@ const DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434/api/chat";
 const DEFAULT_MAX_TOKENS = 512;
 const DEFAULT_TIMEOUT_MS = 300000;
 
+function inferProvider(endpoint, explicitProvider = "") {
+  if (explicitProvider) return explicitProvider;
+  return /\/v1(?:\/chat\/completions)?\/?$/i.test(String(endpoint || "")) ? "openai" : "ollama";
+}
+
+function normalizeEndpoint(endpoint, provider) {
+  const value = String(endpoint || "").replace(/\/+$/, "");
+  if (provider === "openai") {
+    if (/\/v1\/chat\/completions$/i.test(value)) return value;
+    if (/\/v1$/i.test(value)) return `${value}/chat/completions`;
+    return `${value}/v1/chat/completions`;
+  }
+  return value || DEFAULT_OLLAMA_URL;
+}
+
+function modelsEndpoint(chatEndpoint, provider) {
+  const value = String(chatEndpoint || "").replace(/\/+$/, "");
+  if (provider === "openai") {
+    return value.replace(/\/v1\/chat\/completions$/i, "/v1/models");
+  }
+  return value.replace(/\/api\/chat$/i, "/api/tags");
+}
+
 function roleSystemPrompt(role) {
   if (role === "local_peer") {
     return [
@@ -59,7 +82,15 @@ function cleanLocalResponse(text) {
 export class LocalModelClient {
   constructor(options = {}) {
     this.model = options.model || "deepseek-r1:latest";
-    this.endpoint = options.endpoint || process.env.OLLAMA_CHAT_URL || DEFAULT_OLLAMA_URL;
+    const endpoint =
+      options.endpoint ||
+      process.env.WALKIE_COLLAB_LOCAL_URL ||
+      process.env.CANAL_API_URL ||
+      process.env.OLLAMA_CHAT_URL ||
+      DEFAULT_OLLAMA_URL;
+    this.provider = inferProvider(endpoint, options.provider || process.env.WALKIE_COLLAB_LOCAL_PROVIDER || "");
+    this.endpoint = normalizeEndpoint(endpoint, this.provider);
+    this.apiKey = options.apiKey || process.env.WALKIE_COLLAB_LOCAL_API_KEY || process.env.CANAL_API_KEY || "";
     this.fetchImpl = options.fetchImpl || globalThis.fetch;
     this.maxTokens = Number(options.maxTokens ?? process.env.OLLAMA_NUM_PREDICT ?? DEFAULT_MAX_TOKENS);
     this.temperature = Number(options.temperature ?? process.env.OLLAMA_TEMPERATURE ?? 0.4);
@@ -72,19 +103,32 @@ export class LocalModelClient {
   }
 
   static tagsEndpoint(chatEndpoint = DEFAULT_OLLAMA_URL) {
-    return String(chatEndpoint).replace(/\/api\/chat\/?$/, "/api/tags");
+    const provider = inferProvider(chatEndpoint);
+    return modelsEndpoint(normalizeEndpoint(chatEndpoint, provider), provider);
   }
 
   static async listAvailableModels(options = {}) {
     const fetchImpl = options.fetchImpl || globalThis.fetch;
     if (!fetchImpl) throw new Error("fetch is not available in this Node.js runtime.");
-    const endpoint = this.tagsEndpoint(options.endpoint || process.env.OLLAMA_CHAT_URL || DEFAULT_OLLAMA_URL);
-    const response = await fetchImpl(endpoint, { method: "GET" });
+    const rawEndpoint =
+      options.endpoint ||
+      process.env.WALKIE_COLLAB_LOCAL_URL ||
+      process.env.CANAL_API_URL ||
+      process.env.OLLAMA_CHAT_URL ||
+      DEFAULT_OLLAMA_URL;
+    const provider = inferProvider(rawEndpoint, options.provider || process.env.WALKIE_COLLAB_LOCAL_PROVIDER || "");
+    const endpoint = modelsEndpoint(normalizeEndpoint(rawEndpoint, provider), provider);
+    const apiKey = options.apiKey || process.env.WALKIE_COLLAB_LOCAL_API_KEY || process.env.CANAL_API_KEY || "";
+    const headers = provider === "openai" && apiKey ? { authorization: `Bearer ${apiKey}` } : {};
+    const response = await fetchImpl(endpoint, { method: "GET", headers });
     if (!response?.ok) {
       const body = await response?.text?.().catch(() => "");
-      throw new Error(`Ollama model list failed: HTTP ${response?.status || "unknown"} ${body}`.trim());
+      throw new Error(`Local model list failed: HTTP ${response?.status || "unknown"} ${body}`.trim());
     }
     const data = await response.json();
+    if (provider === "openai" && Array.isArray(data?.data)) {
+      return data.data.map((model) => ({ name: model.id || model.model })).filter((model) => model.name);
+    }
     return Array.isArray(data?.models) ? data.models : [];
   }
 
@@ -146,19 +190,31 @@ export class LocalModelClient {
     try {
       response = await this.fetchImpl(this.endpoint, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          ...(this.provider === "openai" && this.apiKey ? { authorization: `Bearer ${this.apiKey}` } : {}),
+        },
         signal: controller.signal,
-        body: JSON.stringify({
-          model: this.model,
-          stream: false,
-          think: false,
-          messages,
-          options: {
-            num_predict: this.maxTokens,
-            temperature: this.temperature,
-            stop: ["<|endoftext|>", "<|im_start|>user", "\nNext speaker:", "\nTranscript:"],
-          },
-        }),
+        body: JSON.stringify(this.provider === "openai"
+          ? {
+              model: this.model,
+              stream: false,
+              messages,
+              max_tokens: this.maxTokens,
+              temperature: this.temperature,
+              stop: ["<|endoftext|>", "<|im_start|>user", "\nNext speaker:", "\nTranscript:"],
+            }
+          : {
+              model: this.model,
+              stream: false,
+              think: false,
+              messages,
+              options: {
+                num_predict: this.maxTokens,
+                temperature: this.temperature,
+                stop: ["<|endoftext|>", "<|im_start|>user", "\nNext speaker:", "\nTranscript:"],
+              },
+            }),
       });
     } catch (error) {
       if (error?.name === "AbortError") {
@@ -175,7 +231,7 @@ export class LocalModelClient {
     }
 
     const data = await response.json();
-    const content = cleanLocalResponse(data?.message?.content ?? data?.response ?? "");
+    const content = cleanLocalResponse(data?.choices?.[0]?.message?.content ?? data?.message?.content ?? data?.response ?? "");
     if (!content && !retrying) {
       return this.#request([
         ...messages,

@@ -32,6 +32,8 @@ Options:
   --local-model <name>        Ollama model (default: deepseek-r1:latest)
   --local-model-selector <cmd>
                               Executable that prints the local model name to stdout
+  --local-provider <name>     ollama or openai
+  --local-url <url>           Local chat endpoint; accepts Ollama /api/chat or OpenAI /v1
   --turns <n>                 Positive finite turn cap
   --duration-minutes <n>      Wall-clock cap; stops when elapsed
   --delay-ms <n>              Delay between loop turns (default: 5000)
@@ -62,7 +64,9 @@ async function runModelSelector(selector, options) {
     env: {
       ...process.env,
       WALKIE_COLLAB_MODE: options.mode,
-      WALKIE_COLLAB_OLLAMA_URL: options.ollamaUrl || "",
+      WALKIE_COLLAB_LOCAL_PROVIDER: options.localProvider || "",
+      WALKIE_COLLAB_LOCAL_URL: options.localUrl || "",
+      WALKIE_COLLAB_OLLAMA_URL: options.localUrl || "",
     },
     timeout: 15000,
     maxBuffer: 64 * 1024,
@@ -73,6 +77,19 @@ async function runModelSelector(selector, options) {
     .find((line) => line && !line.startsWith("#"));
   if (!model) throw new Error(`Model selector produced no model: ${command}`);
   return model;
+}
+
+function applyLocalSelection(options, selection) {
+  const value = String(selection || "").trim();
+  if (!value) return;
+  const parts = value.split("|").map((part) => part.trim());
+  if (parts.length >= 3 && parts[0] && parts[1] && parts.slice(2).join("|")) {
+    options.localProvider = parts[0];
+    options.localUrl = parts[1];
+    options.localModel = parts.slice(2).join("|");
+    return;
+  }
+  options.localModel = value;
 }
 
 function parseArgs(argv) {
@@ -134,6 +151,14 @@ function parseArgs(argv) {
     localModelExplicit:
       values.has("--local-model") || Boolean(process.env.WALKIE_COLLAB_LOCAL_MODEL || process.env.WALKIE_LOCAL_MODEL),
     localModelSelector: values.get("--local-model-selector") || process.env.WALKIE_COLLAB_MODEL_SELECTOR || "",
+    localProvider: values.get("--local-provider") || process.env.WALKIE_COLLAB_LOCAL_PROVIDER || "",
+    localUrl:
+      values.get("--local-url") ||
+      values.get("--ollama-url") ||
+      process.env.WALKIE_COLLAB_LOCAL_URL ||
+      process.env.CANAL_API_URL ||
+      process.env.OLLAMA_CHAT_URL ||
+      "",
     turns,
     durationMs,
     durationMinutes,
@@ -192,15 +217,18 @@ async function main() {
   });
 
   if (!options.localModel && options.localModelSelector) {
-    options.localModel = await runModelSelector(options.localModelSelector, options);
+    applyLocalSelection(options, await runModelSelector(options.localModelSelector, options));
     options.localModelExplicit = true;
     process.stderr.write(`${C.dim}[local] selector picked ${options.localModel}${C.reset}\n`);
+  } else if (options.localModel) {
+    applyLocalSelection(options, options.localModel);
   }
 
   const resolvedLocalModel = options.localModelExplicit
     ? options.localModel
     : await LocalModelClient.resolveModel("", {
-        endpoint: options.ollamaUrl || undefined,
+        endpoint: options.localUrl || options.ollamaUrl || undefined,
+        provider: options.localProvider || undefined,
       });
   if (!options.localModelExplicit) {
     process.stderr.write(`${C.dim}[local] selected ${resolvedLocalModel}${C.reset}\n`);
@@ -209,7 +237,8 @@ async function main() {
 
   const localClient = new LocalModelClient({
     model: resolvedLocalModel,
-    endpoint: options.ollamaUrl || undefined,
+    endpoint: options.localUrl || options.ollamaUrl || undefined,
+    provider: options.localProvider || undefined,
     maxTokens: options.localMaxTokens,
     requestTimeoutMs: options.localTimeoutMs,
   });

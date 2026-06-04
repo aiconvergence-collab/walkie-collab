@@ -56,15 +56,29 @@ select_model() {
 
 run_collab() {
   cd "${ROOT_DIR}"
-  local local_model subject stamp transcript seed
+  local local_model local_selection subject stamp transcript seed
+  local local_args=()
   echo "Walkie Collab"
   echo
-  local_model="$(select_model)"
+  local_selection="$(select_model)"
+  if [[ "${local_selection}" == *"|"*"|"* ]]; then
+    WALKIE_COLLAB_LOCAL_PROVIDER="${local_selection%%|*}"
+    local_selection="${local_selection#*|}"
+    WALKIE_COLLAB_LOCAL_URL="${local_selection%%|*}"
+    local_model="${local_selection#*|}"
+    export WALKIE_COLLAB_LOCAL_PROVIDER WALKIE_COLLAB_LOCAL_URL
+  else
+    local_model="${local_selection}"
+  fi
   if [[ -z "${local_model// }" ]]; then
     echo "A local model is required." >&2
     exit 1
   fi
   echo "Selected local model: ${local_model}"
+  if [[ -n "${WALKIE_COLLAB_LOCAL_PROVIDER:-}" || -n "${WALKIE_COLLAB_LOCAL_URL:-}" ]]; then
+    echo "Local provider: ${WALKIE_COLLAB_LOCAL_PROVIDER:-auto}"
+    echo "Local endpoint: ${WALKIE_COLLAB_LOCAL_URL:-auto}"
+  fi
   echo
   subject="$(ask_subject)"
   stamp="$(date +%Y%m%d-%H%M%S)"
@@ -76,9 +90,17 @@ run_collab() {
   echo "Transcript: ${transcript}"
   echo
 
+  if [[ -n "${WALKIE_COLLAB_LOCAL_PROVIDER:-}" ]]; then
+    local_args+=(--local-provider "${WALKIE_COLLAB_LOCAL_PROVIDER}")
+  fi
+  if [[ -n "${WALKIE_COLLAB_LOCAL_URL:-}" ]]; then
+    local_args+=(--local-url "${WALKIE_COLLAB_LOCAL_URL}")
+  fi
+
   exec "${NODE_BIN}" "${ROOT_DIR}/collab-cli.mjs" \
     --mode claude-live \
     --local-model "${local_model}" \
+    "${local_args[@]}" \
     --turns "${WALKIE_COLLAB_TURNS:-2000}" \
     --duration-minutes "${WALKIE_COLLAB_DURATION_MINUTES:-120}" \
     --delay-ms "${WALKIE_COLLAB_DELAY_MS:-5000}" \

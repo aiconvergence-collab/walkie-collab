@@ -1,9 +1,9 @@
 # Walkie Collab
 
-Bounded terminal collaboration between an Ollama-compatible local model and a
-Claude.ai browser session. The collab mode is designed as a visible terminal
-room: a selected local model sends a turn, Claude replies through the
-user's existing Claude.ai web session, and the transcript is written locally.
+Bounded terminal collaboration between a local model endpoint and a Claude.ai
+browser session. The collab mode is designed as a visible terminal room: a
+selected local model sends a turn, Claude replies through the user's existing
+Claude.ai web session, and the transcript is written locally.
 
 This project does not provide unlimited Claude access and does not bypass
 account limits. It drives the user's own logged-in Claude.ai web UI through a
@@ -41,7 +41,10 @@ Safety defaults:
 - JSONL transcript logging under `.cache/collab/`
 - stop guards for obvious tool requests, repetition, and token budget
 
-Local model support is Ollama-compatible. Use any model visible in:
+Local model support works with Ollama and OpenAI-compatible local servers such
+as llama.cpp/CANAL/Tribunal endpoints.
+
+For Ollama, use any model visible in:
 
 ```bash
 ollama list
@@ -53,6 +56,27 @@ Set the model for the desktop launcher with:
 WALKIE_COLLAB_LOCAL_MODEL="your-model:tag" scripts/launch-walkie-collab.sh
 ```
 
+For Canal or Tribunal endpoints, pass the provider and endpoint explicitly:
+
+```bash
+WALKIE_COLLAB_LOCAL_PROVIDER=openai \
+WALKIE_COLLAB_LOCAL_URL=http://127.0.0.1:8198/v1/chat/completions \
+WALKIE_COLLAB_LOCAL_MODEL=qwen80-canalw \
+scripts/launch-walkie-collab.sh
+```
+
+The selector also accepts a portable encoded form:
+
+```bash
+openai|http://127.0.0.1:8198/v1/chat/completions|qwen80-canalw
+```
+
+Built-in desktop selector presets include:
+
+- `Qwen 80B via Tribunal/Canal (:8198)` -> `qwen80-canalw`
+- `Gemma 4 26B via Canal (:8193)` -> `gemma-4-26b`
+- `Qwen Coder via Canal (:8192)` -> `qwen2.5-coder-32b-canal`
+
 Recommended local and cloud model tags that work through Ollama's model registry:
 
 ```bash
@@ -63,7 +87,8 @@ ollama pull gemma4:31b-cloud
 ```
 
 Or plug in your own selector. The selector can be any executable; it should
-print exactly one model name/tag to stdout:
+print exactly one model name/tag or `provider|endpoint|model` selection to
+stdout:
 
 ```bash
 WALKIE_COLLAB_MODEL_SELECTOR="./scripts/select-local-model.sh" scripts/launch-walkie-collab.sh

@@ -81,6 +81,34 @@ test("local model formats Ollama chat request", async () => {
   assert.match(requestBody.messages[0].content, /LOCAL_MODEL/);
 });
 
+test("local model formats OpenAI-compatible chat request", async () => {
+  let requestBody;
+  const client = new LocalModelClient({
+    provider: "openai",
+    model: "qwen80-canalw",
+    endpoint: "http://127.0.0.1:8198/v1",
+    maxTokens: 96,
+    fetchImpl: async (url, request) => {
+      assert.equal(url, "http://127.0.0.1:8198/v1/chat/completions");
+      requestBody = JSON.parse(request.body);
+      return {
+        ok: true,
+        async json() {
+          return { choices: [{ message: { content: "canal response" } }] };
+        },
+      };
+    },
+  });
+
+  const response = await client.ask([{ type: "seed", content: "build a plan" }], { speaker: "local" });
+  assert.equal(response, "canal response");
+  assert.equal(requestBody.model, "qwen80-canalw");
+  assert.equal(requestBody.stream, false);
+  assert.equal(requestBody.max_tokens, 96);
+  assert.equal(requestBody.temperature, 0.4);
+  assert.equal(requestBody.think, undefined);
+});
+
 test("local model retries when Qwen only emits hidden thinking", async () => {
   let calls = 0;
   const client = new LocalModelClient({

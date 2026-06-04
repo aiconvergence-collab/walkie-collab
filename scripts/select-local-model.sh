@@ -39,10 +39,11 @@ else
 fi
 
 choice=""
-if [[ -r /dev/tty ]]; then
-  read -r -p "Local model: " choice </dev/tty
+if { exec 3</dev/tty; } 2>/dev/null; then
+  read -r -p "Local model: " choice <&3 || true
+  exec 3<&-
 else
-  read -r choice
+  read -r choice || true
 fi
 
 if [[ "${choice}" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#MODELS[@]} )); then

@@ -31,7 +31,7 @@ npm run install-desktop
 ```
 
 Then open **Walkie Collab** from the app menu or desktop. It prompts for a
-subject, prompts for a local model, and opens a terminal where that model and
+local model, prompts for a subject, and opens a terminal where that model and
 Claude chat turn by turn.
 
 Safety defaults:

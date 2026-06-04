@@ -31,9 +31,7 @@ fi
 ask_subject() {
   local subject="${WALKIE_COLLAB_SUBJECT:-}"
   if [[ -z "${subject}" ]]; then
-    echo "Walkie Collab"
-    echo
-    read -rp "Subject for the local model and Claude to discuss: " subject
+    read -rp "Subject for the selected local model and Claude to discuss: " subject
   fi
   if [[ -z "${subject// }" ]]; then
     echo "A subject is required." >&2
@@ -42,22 +40,37 @@ ask_subject() {
   printf '%s' "${subject}"
 }
 
+select_model() {
+  local model="${WALKIE_COLLAB_LOCAL_MODEL:-}"
+  local model_selector="${WALKIE_COLLAB_MODEL_SELECTOR:-${ROOT_DIR}/scripts/select-local-model.sh}"
+  if [[ -n "${model}" ]]; then
+    printf '%s' "${model}"
+    return
+  fi
+  if [[ -z "${model_selector}" ]]; then
+    echo "A local model or model selector is required." >&2
+    exit 1
+  fi
+  "${model_selector}"
+}
+
 run_collab() {
   cd "${ROOT_DIR}"
-  local subject stamp transcript seed model_selector
-  local -a model_args
+  local local_model subject stamp transcript seed
+  echo "Walkie Collab"
+  echo
+  local_model="$(select_model)"
+  if [[ -z "${local_model// }" ]]; then
+    echo "A local model is required." >&2
+    exit 1
+  fi
+  echo "Selected local model: ${local_model}"
+  echo
   subject="$(ask_subject)"
   stamp="$(date +%Y%m%d-%H%M%S)"
   transcript="${ROOT_DIR}/.cache/collab/collab-${stamp}.jsonl"
   mkdir -p "$(dirname "${transcript}")"
   seed="Subject: ${subject}. The selected local model and Claude should chat as research collaborators for two hours. Explore the topic from multiple angles, challenge weak claims, and keep each turn concise enough for a human operator to follow. Use plain text notation. Be cautious and do not claim conclusions without explicit defensible steps. No tools."
-  model_selector="${WALKIE_COLLAB_MODEL_SELECTOR:-${ROOT_DIR}/scripts/select-local-model.sh}"
-  model_args=()
-  if [[ -n "${WALKIE_COLLAB_LOCAL_MODEL:-}" ]]; then
-    model_args=(--local-model "${WALKIE_COLLAB_LOCAL_MODEL}")
-  elif [[ -n "${model_selector}" ]]; then
-    model_args=(--local-model-selector "${model_selector}")
-  fi
 
   echo
   echo "Transcript: ${transcript}"
@@ -65,7 +78,7 @@ run_collab() {
 
   exec "${NODE_BIN}" "${ROOT_DIR}/collab-cli.mjs" \
     --mode claude-live \
-    "${model_args[@]}" \
+    --local-model "${local_model}" \
     --turns "${WALKIE_COLLAB_TURNS:-2000}" \
     --duration-minutes "${WALKIE_COLLAB_DURATION_MINUTES:-120}" \
     --delay-ms "${WALKIE_COLLAB_DELAY_MS:-5000}" \

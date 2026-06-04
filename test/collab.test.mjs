@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { LocalModelClient } from "../collab/local-model.mjs";
-import { CollabOrchestrator } from "../collab/orchestrator.mjs";
+import { CollabOrchestrator, __testing as orchestratorTesting } from "../collab/orchestrator.mjs";
 import { SafetyGovernor } from "../collab/safety-governor.mjs";
 import { TranscriptStore } from "../collab/transcript.mjs";
 
@@ -36,6 +36,22 @@ test("safety stops on tool requests and near duplicates", () => {
   ]);
   assert.equal(duplicateStop.stop, true);
   assert.equal(duplicateStop.reason, "near_duplicate_turns");
+});
+
+test("safety stops when Claude free-message limit is reached", () => {
+  const safety = new SafetyGovernor({ maxTurns: 4, tokenBudget: 1000 });
+  const stop = safety.inspectTurn({ role: "claude", content: "Session complete. Nothing further to add. You are out of free messages until 4:30 AM" }, []);
+  assert.equal(stop.stop, true);
+  assert.equal(stop.reason, "claude_limit_reached");
+});
+
+test("Claude response cleaner strips wrapper echo fluff", () => {
+  const cleaned = orchestratorTesting.cleanClaudeResponse([
+    "Session complete. Nothing further to add. You said: You are participating in a bounded local collaboration session.",
+    "Role: Claude participant.",
+    "Transcript: [local turn 20] useful content",
+  ].join("\\n"));
+  assert.equal(cleaned, "Session complete. Nothing further to add.");
 });
 
 test("local model formats Ollama chat request", async () => {

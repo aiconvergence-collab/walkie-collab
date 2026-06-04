@@ -22,6 +22,9 @@ function claudeBasePrompt({ role, transcriptEntries, seed }) {
 
 function cleanClaudeResponse(text) {
   let value = String(text || "");
+  value = value.replace(/\bYou've used \d+% of your session limit\b\.?/gi, "");
+  value = value.replace(/\bYou are out of free messages until\b[\s\S]*$/i, "You are out of free messages.");
+  value = value.replace(/\bYou said:\s*You are participating in a bounded local collaboration session[\s\S]*$/i, "");
   const claudeMatch = /^\s*\[Claude\]\s*([\s\S]*?)(?=\n\s*\[(?:local|qwen|claude|seed)[^\]]*\]|\n\s*(?:Respond as|Write only|Transcript:|User seed prompt:)|$)/i.exec(value);
   if (claudeMatch) value = claudeMatch[1];
   value = value.replace(/^\s*\[Claude\]\s*/i, "");
@@ -35,6 +38,8 @@ function cleanClaudeResponse(text) {
   value = value.trim();
   return value || String(text || "").trim();
 }
+
+export const __testing = { cleanClaudeResponse };
 
 export class CollabOrchestrator {
   constructor(options = {}) {

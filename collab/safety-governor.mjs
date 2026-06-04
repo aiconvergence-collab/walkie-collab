@@ -70,6 +70,15 @@ export class SafetyGovernor {
 
   inspectTurn(entry, transcriptEntries = []) {
     const content = String(entry?.content || "");
+    const serviceLimit = this.detectServiceLimit(content);
+    if (serviceLimit) {
+      return {
+        stop: true,
+        reason: serviceLimit,
+        speaker: entry.role,
+      };
+    }
+
     const toolRequest = this.detectToolRequest(content);
     if (toolRequest) {
       return {
@@ -136,6 +145,13 @@ export class SafetyGovernor {
     const escaped = this.stopPhrases.map((phrase) => phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
     const pattern = new RegExp(`^\\s*(${escaped.join("|")})\\s*[.!?]*\\s*$`, "im");
     return pattern.exec(String(text || ""))?.[1] || "";
+  }
+
+  detectServiceLimit(text) {
+    const value = String(text || "");
+    if (/\byou are out of free messages until\b/i.test(value)) return "claude_limit_reached";
+    if (/^\s*session complete\.\s*nothing further to add\.?\s*$/i.test(value)) return "conversation_complete";
+    return "";
   }
 }
 

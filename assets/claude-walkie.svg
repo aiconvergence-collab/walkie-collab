@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title>Claude Walkie</title>
+  <desc>Icon for launching Claude Walkie CLI</desc>
+  <defs>
+    <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2f6ce0"/>
+      <stop offset="100%" stop-color="#7c4dff"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="224" height="224" rx="48" fill="url(#grad)"/>
+  <rect x="44" y="44" width="168" height="168" rx="36" fill="#0d1117"/>
+  <path d="M128 56c-14.9 0-27 12.1-27 27v38c0 14.9 12.1 27 27 27s27-12.1 27-27V83c0-14.9-12.1-27-27-27z" fill="#8ab4ff"/>
+  <path d="M90 96h76" stroke="#8ab4ff" stroke-width="10" stroke-linecap="round"/>
+  <path d="M99 141h52c-3.8 17.5-14.2 28-26 28s-22.1-10.5-26-28z" fill="#8ab4ff"/>
+  <path d="M128 169v25M116 194h24" stroke="#8ab4ff" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="128" cy="128" r="10" fill="#8ab4ff"/>
+</svg>

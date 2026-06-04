@@ -1,0 +1,21 @@
+{
+  "name": "walkie-collab",
+  "private": false,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Bounded terminal collaboration between Ollama local models and a Claude.ai browser session.",
+  "bin": {
+    "claude-walkie": "./walkie.mjs"
+  },
+  "scripts": {
+    "start": "node walkie.mjs",
+    "collab": "node collab-cli.mjs",
+    "test": "node --test test/*.test.mjs",
+    "setup": "npm i",
+    "start-desktop": "bash ./scripts/launch-claude-desktop.sh --google-login",
+    "install-desktop": "bash ./scripts/install-desktop-icon.sh"
+  },
+  "dependencies": {
+    "playwright": "^1.50.0"
+  }
+}

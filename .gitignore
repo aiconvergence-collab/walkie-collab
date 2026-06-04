@@ -1,0 +1,9 @@
+node_modules/
+.cache/
+*.log
+*.tmp
+*.pid
+.DS_Store
+
+# Local browser/session state and generated handoff notes.
+handoff/

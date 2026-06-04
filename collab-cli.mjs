@@ -156,7 +156,6 @@ function parseArgs(argv) {
       values.get("--local-url") ||
       values.get("--ollama-url") ||
       process.env.WALKIE_COLLAB_LOCAL_URL ||
-      process.env.CANAL_API_URL ||
       process.env.OLLAMA_CHAT_URL ||
       "",
     turns,

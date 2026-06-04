@@ -3,7 +3,7 @@ set -euo pipefail
 
 NODE_BIN="${CLAUDE_NODE_BIN:-$(command -v node 2>/dev/null || true)}"
 OLLAMA_CHAT_URL="${WALKIE_COLLAB_OLLAMA_URL:-${OLLAMA_CHAT_URL:-http://127.0.0.1:11434/api/chat}}"
-LOCAL_URL="${WALKIE_COLLAB_LOCAL_URL:-${CANAL_API_URL:-}}"
+LOCAL_URL="${WALKIE_COLLAB_LOCAL_URL:-}"
 
 if [[ -z "${NODE_BIN}" ]]; then
   echo "Node.js is required to list local models." >&2
@@ -60,7 +60,7 @@ async function addOpenAI(baseUrl) {
   if (!chatUrl) return;
   const modelsUrl = chatUrl.replace(/\/v1\/chat\/completions$/i, "/v1/models");
   const response = await fetch(modelsUrl, {
-    headers: process.env.CANAL_API_KEY ? { authorization: `Bearer ${process.env.CANAL_API_KEY}` } : {},
+    headers: process.env.WALKIE_COLLAB_LOCAL_API_KEY ? { authorization: `Bearer ${process.env.WALKIE_COLLAB_LOCAL_API_KEY}` } : {},
     signal: AbortSignal.timeout(1000),
   });
   if (!response.ok) return;
@@ -71,19 +71,7 @@ async function addOpenAI(baseUrl) {
   }
 }
 
-for (const url of [
-  explicitLocalUrl,
-  process.env.CANAL_API_URL,
-  "http://127.0.0.1:8198/v1",
-  "http://127.0.0.1:8193/v1",
-  "http://127.0.0.1:8192/v1",
-]) {
-  await addOpenAI(url).catch(() => {});
-}
-
-add("Qwen 80B via Tribunal/Canal (:8198)", "openai|http://127.0.0.1:8198/v1/chat/completions|qwen80-canalw");
-add("Gemma 4 26B via Canal (:8193)", "openai|http://127.0.0.1:8193/v1/chat/completions|gemma-4-26b");
-add("Qwen Coder via Canal (:8192)", "openai|http://127.0.0.1:8192/v1/chat/completions|qwen2.5-coder-32b-canal");
+await addOpenAI(explicitLocalUrl).catch(() => {});
 await addOllama().catch(() => {});
 
 for (const [label, spec] of rows) console.log(`${label}\t${spec}`);
@@ -111,7 +99,7 @@ else
     local_index=$((local_index + 1))
   done
   echo "Or type any model tag manually." >&2
-  echo "OpenAI-compatible manual form: openai|http://127.0.0.1:8198/v1/chat/completions|qwen80-canalw" >&2
+  echo "OpenAI-compatible manual form: openai|http://127.0.0.1:PORT/v1/chat/completions|model-name" >&2
 fi
 
 choice=""

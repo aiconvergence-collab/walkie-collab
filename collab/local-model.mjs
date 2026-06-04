@@ -96,12 +96,11 @@ export class LocalModelClient {
     const endpoint =
       options.endpoint ||
       process.env.WALKIE_COLLAB_LOCAL_URL ||
-      process.env.CANAL_API_URL ||
       process.env.OLLAMA_CHAT_URL ||
       DEFAULT_OLLAMA_URL;
     this.provider = inferProvider(endpoint, options.provider || process.env.WALKIE_COLLAB_LOCAL_PROVIDER || "");
     this.endpoint = normalizeEndpoint(endpoint, this.provider);
-    this.apiKey = options.apiKey || process.env.WALKIE_COLLAB_LOCAL_API_KEY || process.env.CANAL_API_KEY || "";
+    this.apiKey = options.apiKey || process.env.WALKIE_COLLAB_LOCAL_API_KEY || "";
     this.fetchImpl = options.fetchImpl || globalThis.fetch;
     this.maxTokens = Number(options.maxTokens ?? process.env.OLLAMA_NUM_PREDICT ?? DEFAULT_MAX_TOKENS);
     this.temperature = Number(options.temperature ?? process.env.OLLAMA_TEMPERATURE ?? 0.4);
@@ -124,12 +123,11 @@ export class LocalModelClient {
     const rawEndpoint =
       options.endpoint ||
       process.env.WALKIE_COLLAB_LOCAL_URL ||
-      process.env.CANAL_API_URL ||
       process.env.OLLAMA_CHAT_URL ||
       DEFAULT_OLLAMA_URL;
     const provider = inferProvider(rawEndpoint, options.provider || process.env.WALKIE_COLLAB_LOCAL_PROVIDER || "");
     const endpoint = modelsEndpoint(normalizeEndpoint(rawEndpoint, provider), provider);
-    const apiKey = options.apiKey || process.env.WALKIE_COLLAB_LOCAL_API_KEY || process.env.CANAL_API_KEY || "";
+    const apiKey = options.apiKey || process.env.WALKIE_COLLAB_LOCAL_API_KEY || "";
     const headers = provider === "openai" && apiKey ? { authorization: `Bearer ${apiKey}` } : {};
     const response = await fetchImpl(endpoint, { method: "GET", headers });
     if (!response?.ok) {

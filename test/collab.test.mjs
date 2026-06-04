@@ -85,24 +85,24 @@ test("local model formats OpenAI-compatible chat request", async () => {
   let requestBody;
   const client = new LocalModelClient({
     provider: "openai",
-    model: "qwen80-canalw",
-    endpoint: "http://127.0.0.1:8198/v1",
+    model: "custom-local-model",
+    endpoint: "http://127.0.0.1:8000/v1",
     maxTokens: 96,
     fetchImpl: async (url, request) => {
-      assert.equal(url, "http://127.0.0.1:8198/v1/chat/completions");
+      assert.equal(url, "http://127.0.0.1:8000/v1/chat/completions");
       requestBody = JSON.parse(request.body);
       return {
         ok: true,
         async json() {
-          return { choices: [{ message: { content: "canal response" } }] };
+          return { choices: [{ message: { content: "custom response" } }] };
         },
       };
     },
   });
 
   const response = await client.ask([{ type: "seed", content: "build a plan" }], { speaker: "local" });
-  assert.equal(response, "canal response");
-  assert.equal(requestBody.model, "qwen80-canalw");
+  assert.equal(response, "custom response");
+  assert.equal(requestBody.model, "custom-local-model");
   assert.equal(requestBody.stream, false);
   assert.equal(requestBody.max_tokens, 96);
   assert.equal(requestBody.temperature, 0.4);

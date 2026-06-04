@@ -41,8 +41,8 @@ Safety defaults:
 - JSONL transcript logging under `.cache/collab/`
 - stop guards for obvious tool requests, repetition, and token budget
 
-Local model support works with Ollama and OpenAI-compatible local servers such
-as llama.cpp/CANAL/Tribunal endpoints.
+Local model support works with Ollama by default. Advanced users can also point
+Walkie Collab at any explicitly configured OpenAI-compatible local chat endpoint.
 
 For Ollama, use any model visible in:
 
@@ -56,26 +56,20 @@ Set the model for the desktop launcher with:
 WALKIE_COLLAB_LOCAL_MODEL="your-model:tag" scripts/launch-walkie-collab.sh
 ```
 
-For Canal or Tribunal endpoints, pass the provider and endpoint explicitly:
+For a custom local chat endpoint, pass the provider and endpoint explicitly:
 
 ```bash
 WALKIE_COLLAB_LOCAL_PROVIDER=openai \
-WALKIE_COLLAB_LOCAL_URL=http://127.0.0.1:8198/v1/chat/completions \
-WALKIE_COLLAB_LOCAL_MODEL=qwen80-canalw \
+WALKIE_COLLAB_LOCAL_URL=http://127.0.0.1:PORT/v1/chat/completions \
+WALKIE_COLLAB_LOCAL_MODEL=your-model-name \
 scripts/launch-walkie-collab.sh
 ```
 
 The selector also accepts a portable encoded form:
 
 ```bash
-openai|http://127.0.0.1:8198/v1/chat/completions|qwen80-canalw
+openai|http://127.0.0.1:PORT/v1/chat/completions|your-model-name
 ```
-
-Built-in desktop selector presets include:
-
-- `Qwen 80B via Tribunal/Canal (:8198)` -> `qwen80-canalw`
-- `Gemma 4 26B via Canal (:8193)` -> `gemma-4-26b`
-- `Qwen Coder via Canal (:8192)` -> `qwen2.5-coder-32b-canal`
 
 Recommended local and cloud model tags that work through Ollama's model registry:
 

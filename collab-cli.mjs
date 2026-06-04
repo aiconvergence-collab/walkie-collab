@@ -260,6 +260,9 @@ async function main() {
     claudeClient.on("state-change", ({ state, detail }) => {
       process.stderr.write(`${C.dim}[claude ${state}] ${detail || ""}${C.reset}\n`);
     });
+    claudeClient.on("error", ({ message }) => {
+      process.stderr.write(`${C.red}[claude error]${C.reset} ${message || "unknown error"}\n`);
+    });
     process.stderr.write(`${C.dim}[claude] connecting; complete browser login if prompted${C.reset}\n`);
     await claudeClient.connect();
     await claudeClient.newChat().catch(() => {});

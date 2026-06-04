@@ -134,6 +134,29 @@ test("local model retries when Qwen only emits hidden thinking", async () => {
   assert.equal(calls, 2);
 });
 
+test("local model timeout covers stalled response body", async () => {
+  const client = new LocalModelClient({
+    model: "mock-model",
+    endpoint: "http://ollama.test/api/chat",
+    requestTimeoutMs: 10,
+    fetchImpl: async (_url, request) => ({
+      ok: true,
+      async json() {
+        return new Promise((_resolve, reject) => {
+          request.signal.addEventListener("abort", () => {
+            reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+          });
+        });
+      },
+    }),
+  });
+
+  await assert.rejects(
+    () => client.ask([{ type: "seed", content: "math chat" }], { speaker: "local" }),
+    /timed out/i,
+  );
+});
+
 test("local model retries when response only echoes control instructions", async () => {
   let calls = 0;
   const client = new LocalModelClient({

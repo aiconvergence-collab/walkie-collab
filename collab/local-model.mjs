@@ -27,6 +27,17 @@ function modelsEndpoint(chatEndpoint, provider) {
   return value.replace(/\/api\/chat$/i, "/api/tags");
 }
 
+async function readJsonWithTimeout(response, controller) {
+  try {
+    return await response.json();
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error("Local model response timed out while reading the response body.");
+    }
+    throw error;
+  }
+}
+
 function roleSystemPrompt(role) {
   if (role === "local_peer") {
     return [
@@ -187,6 +198,7 @@ export class LocalModelClient {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.requestTimeoutMs);
     let response;
+    let data;
     try {
       response = await this.fetchImpl(this.endpoint, {
         method: "POST",
@@ -216,6 +228,11 @@ export class LocalModelClient {
               },
             }),
       });
+      if (!response?.ok) {
+        const body = await response?.text?.().catch(() => "");
+        throw new Error(`Local model request failed: HTTP ${response?.status || "unknown"} ${body}`.trim());
+      }
+      data = await readJsonWithTimeout(response, controller);
     } catch (error) {
       if (error?.name === "AbortError") {
         throw new Error(`Local model request timed out after ${this.requestTimeoutMs}ms.`);
@@ -225,12 +242,6 @@ export class LocalModelClient {
       clearTimeout(timeout);
     }
 
-    if (!response?.ok) {
-      const body = await response?.text?.().catch(() => "");
-      throw new Error(`Local model request failed: HTTP ${response?.status || "unknown"} ${body}`.trim());
-    }
-
-    const data = await response.json();
     const content = cleanLocalResponse(data?.choices?.[0]?.message?.content ?? data?.message?.content ?? data?.response ?? "");
     if (!content && !retrying) {
       return this.#request([
